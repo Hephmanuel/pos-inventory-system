@@ -27,7 +27,7 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: '20'
         cache: 'npm'
         # We must tell it exactly where the lock file is to speed up installs
         cache-dependency-path: frontend/pos-inventory-frontend/package-lock.json
