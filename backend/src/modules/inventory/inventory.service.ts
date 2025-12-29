@@ -10,4 +10,6 @@ export class InventoryService {
     @InjectRepository(StockItem) private stockRepo: Repository<StockItem>,
     @InjectRepository(StockMovement) private movementRepo: Repository<StockMovement>,
   ) {}
+
+
 }
