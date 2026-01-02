@@ -25,4 +25,10 @@ export class CatalogController {
   updateSkuPrice(@Param('id') id: string, @Body('price') newPrice: number) {
     return this.catalogService.updateSkuPrice(id, newPrice);
   }
+
+  // 👇 PASTE THIS PART INSIDE THE CLASS 👇
+  @Get()
+  getWelcomeMessage() {
+    return 'Welcome to the Catalog Module';
+  }
 }
