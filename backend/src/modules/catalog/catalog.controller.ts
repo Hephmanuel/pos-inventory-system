@@ -26,7 +26,6 @@ export class CatalogController {
     return this.catalogService.updateSkuPrice(id, newPrice);
   }
 
-  // 👇 PASTE THIS PART INSIDE THE CLASS 👇
   @Get()
   getWelcomeMessage() {
     return 'Welcome to the Catalog Module';
