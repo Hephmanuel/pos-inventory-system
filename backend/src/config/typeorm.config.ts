@@ -5,10 +5,7 @@ export const typeOrmConfig = (): TypeOrmModuleOptions => ({
   url: process.env.DATABASE_URL, 
   autoLoadEntities: true,
   synchronize: true, 
-  ssl: {
-    rejectUnauthorized: false, 
-  },
-
+  ssl: true,
   extra: {
     ssl: {
       rejectUnauthorized: false,
