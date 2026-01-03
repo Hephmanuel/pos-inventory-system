@@ -13,11 +13,37 @@ export class InventoryService {
     @InjectRepository(StockMovement) private movementRepo: Repository<StockMovement>,
   ) {}
 
-  async deductStock(skuId: string, quantity: number, manager: any) {
-  // This is a temporary placeholder for Dev 3
-  // In a real scenario, it checks the DB and throws error if qty < quantity
-  return { price: 2500.00 }; // Returns a fake price so the sale can calculate total
-}
+
+  async deductStock(sku_id: string, quantity: number, manager: any) {
+    //Find the item using the manager
+    const item = await manager.findOne(StockItem, { where: { sku_id } });
+
+    if (!item) {
+      throw new NotFoundException(`Item with SKU ${sku_id} not found in inventory.`);
+    }
+
+    //Check if we have enough stock (Convert to Number because decimals return as strings)
+    const available = Number(item.quantity_available);
+    if (available < quantity) {
+      throw new Error(`Insufficient stock for ${sku_id}. Available: ${available}, Requested: ${quantity}`);
+    }
+
+    //Deduct the stock
+    item.quantity_available = available - quantity;
+    await manager.save(item);
+
+    //Log the movement (Audit Trail)
+    const movement = manager.create(StockMovement, {
+      sku_id,
+      quantity: -quantity, // Negative because it's leaving the inventory
+      reason: 'Sale Transaction',
+      movement_type: MovementType.SALE,
+    });
+    await manager.save(movement);
+
+    //Return a fake price as requested
+    return { price: 2500.00 }; 
+  }
 
   async getStockLevels() {
     return await this.stockItemRepo.find();
