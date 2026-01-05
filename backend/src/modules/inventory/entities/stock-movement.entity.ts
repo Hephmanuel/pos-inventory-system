@@ -16,6 +16,9 @@ export class StockMovement extends BaseEntity {
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   quantity: number;
 
+  @Column({nullable: true})
+  reason: string;
+
   @Column({ type: 'enum', enum: MovementType })
   movement_type: MovementType;
 
