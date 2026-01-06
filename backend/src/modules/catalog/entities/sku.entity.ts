@@ -1,9 +1,10 @@
-import { Entity, Column, ManyToOne } from 'typeorm';
+import { Entity, Column, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { Product } from './product.entity';
 
 @Entity('skus')
 export class Sku extends BaseEntity {
+
   @Column({ unique: true })
   sku_code: string; 
 

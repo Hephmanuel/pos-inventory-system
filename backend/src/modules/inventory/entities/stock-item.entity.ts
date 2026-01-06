@@ -15,4 +15,7 @@ export class StockItem extends BaseEntity {
 
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   quantity_reserved: number; 
+
+  @Column({ name: 'location', nullable: true })
+  location: string;
 }
