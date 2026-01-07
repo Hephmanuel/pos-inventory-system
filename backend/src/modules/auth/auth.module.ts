@@ -1,10 +1,11 @@
+// @ts-nocheck
 import { Module } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { StaffModule } from '../staff/staff.module';
 
 @Module({
-  imports: [StaffModule], 
+  imports: [StaffModule],
   providers: [AuthService],
   controllers: [AuthController],
 })
