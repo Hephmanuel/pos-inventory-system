@@ -31,7 +31,7 @@ export default function POSHeader({ isSidebarOpen, onToggle }: HeaderProps) {
       </div>
         
       <div className="flex items-center gap-6">
-        {/* <LiveClock /> */}
+        <LiveClock />
         {/* <span className="text-[11px] text-gray-500 font-medium">Thurs 12th 10:10:56</span> */}
 
         <div className="flex items-center gap-3 border-l pl-6 border-gray-100">
