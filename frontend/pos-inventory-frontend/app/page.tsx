@@ -1,3 +1,4 @@
+
 import Link from "next/link";
 import { Store, ArrowRight } from "lucide-react"; // Using Lucide for a professional look
 
@@ -41,8 +42,15 @@ export default function LandingPage() {
 
       {/* Footer Info */}
       <p className="mt-12 text-sm text-gray-400">
-        © 2024 SwiftPOS Systems. All rights reserved.
+        © 2026 SwiftPOS Systems. All rights reserved.
       </p>
     </div>
   );
+}
+        
+import Image from 'next/image';
+import React from 'react';
+import { redirect } from 'next/navigation';
+export default function Home() {
+  return redirect('/dashboard');
 }
