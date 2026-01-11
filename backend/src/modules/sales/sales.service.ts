@@ -161,6 +161,9 @@ export class SalesService {
         await queryRunner.manager.save(movement);
       }
 
+      sale.status = 'REFUNDED';
+      await queryRunner.manager.save(sale);
+
       // 4. Update the sale status (Optional: add a 'status' column to Sale entity later)
       // For now, we will leave the sale record but the inventory is restored.
 
