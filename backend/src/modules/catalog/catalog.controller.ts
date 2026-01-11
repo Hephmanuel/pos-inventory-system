@@ -49,4 +49,16 @@ export class CatalogController {
   getWelcomeMessage() {
     return 'Welcome to the Catalog Module';
   }
+
+  @Patch('products/:id')
+  @ApiOperation({ summary: 'Update product details' })
+  updateProduct(@Param('id') id: string, @Body() body: Partial<CreateProductDto>) {
+    return this.catalogService.updateProduct(id, body);
+  }
+
+  @Delete('products/:id')
+  @ApiOperation({ summary: 'Deactivate/Delete a product' })
+  delete(@Param('id') id: string) {
+    return this.catalogService.deleteProduct(id);
+  }
 }
