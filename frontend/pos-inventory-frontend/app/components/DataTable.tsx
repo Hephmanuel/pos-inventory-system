@@ -1,52 +1,66 @@
 "use client";
 
-const Products = [
-  { id: "1", name: "Tom-Tom",          category: "Snacks",      stock: 10, price: 1500.00 },
-  { id: "2", name: "Blue T-Shirt",     category: "Clothing",     stock: 15, price: 1500.00 },
-  { id: "3", name: "Black Purse",      category: "Accessories",  stock: 8, price: 1500.00 },
-  { id: "4", name: "Tom-Tom",          category: "Snacks",       stock: 12, price: 1500.00 },
-  { id: "5", name: "Red T-Shirt",      category: "Clothing",     stock: 5, price: 1500.00 },
-  { id: "6", name: "Brown Belt",       category: "Accessories",  stock: 20, price: 1500.00 },
-  { id: "7", name: "Tom-Tom",          category: "Snacks",       stock: 7, price: 1500.00 },
-  { id: "8", name: "Green T-Shirt",    category: "Clothing",     stock: 9, price: 1500.00 },
-  { id: "9", name: "Silver Necklace",  category: "Accessories",  stock: 4, price: 1500.00 },
+// 1. Define what a Product looks like based on your backend
+interface Product {
+  skuId: string;
+  sku: string;
+  product: string;
+  category: string;
+  stock: number;
+  price: number;
+}
 
-];
+interface DataTableProps {
+  products: Product[]; // Receives the live list
+  onRowClick: (product: any) => void;
+  isLoading: boolean; // Shows a loading state
+}
 
- 
+export default function DataTable({ products, onRowClick, isLoading }: DataTableProps) {
+  if (isLoading) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-white rounded-2xl border">
+        <p className="text-gray-400 animate-pulse font-bold">Fetching Live Inventory...</p>
+      </div>
+    );
+  }
 
-export default function DataTable({ onRowClick }: { onRowClick: (product: any) => void }) {
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden flex-1 flex flex-col">
       <div className="overflow-y-auto">
         <table className="w-full text-center border-collapse">
           <thead className="bg-[#F8F9FB] sticky top-0 z-10 border-b border-gray-100">
             <tr>
-              <th className="px-8 py-4 text-[10px] font-bold text-gray-900 uppercase tracking-wider">SKU</th>
-              <th className="px-8 py-4 text-[10px] font-bold text-gray-900 uppercase tracking-wider">Product</th>
-              <th className="px-8 py-4 text-[10px] font-bold text-gray-900 uppercase tracking-wider">Category</th>
-              <th className="px-8 py-4 text-[10px] font-bold text-gray-900 uppercase tracking-wider">Stock</th>
-              <th className="px-8 py-4 text-[10px] font-bold text-gray-900 uppercase tracking-wider">Price</th>
+              <th className="px-8 py-4 text-[10px] font-bold text-gray-900 uppercase">SKU</th>
+              <th className="px-8 py-4 text-[10px] font-bold text-gray-900 uppercase">Product</th>
+              <th className="px-8 py-4 text-[10px] font-bold text-gray-900 uppercase">Category</th>
+              <th className="px-8 py-4 text-[10px] font-bold text-gray-900 uppercase">Stock</th>
+              <th className="px-8 py-4 text-[10px] font-bold text-gray-900 uppercase">Price</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {Products.map((product) => (
+            {products.map((item) => (
               <tr 
-                key={product.id} 
-                onClick={() => onRowClick(product)}
+                key={item.skuId} 
+                onClick={() => onRowClick({ id: item.skuId, name: item.product, price: item.price })}
                 className="hover:bg-[#EBF3FF] cursor-pointer transition-colors"
               >
-                <td className="px-8 py-4 text-[11px] ">{product.id}</td>
-                <td className="px-8 py-4 text-[11px] ">{product.name}</td>
-                <td className="px-8 py-4 text-[11px] ">{product.category}</td>
-                <td className="px-8 py-4 text-[11px] font-bold">{product.stock}</td>
-                <td className="px-8 py-4 text-[11px] font-bold">
-                  NGN {product.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                <td className="px-8 py-4 text-[11px]">{item.sku}</td>
+                <td className="px-8 py-4 text-[11px]">{item.product}</td>
+                <td className="px-8 py-4 text-[11px]">{item.category}</td>
+                <td className={`px-8 py-4 text-[11px] font-bold ${item.stock <= 5 ? 'text-red-500' : ''}`}>
+                  {item.stock}
+                </td>
+                <td className="px-8 py-4 text-[11px] font-bold text-[#0066FF]">
+                  NGN {item.price.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+        {products.length === 0 && (
+          <div className="p-20 text-center text-gray-400">No products found in inventory.</div>
+        )}
       </div>
     </div>
   );

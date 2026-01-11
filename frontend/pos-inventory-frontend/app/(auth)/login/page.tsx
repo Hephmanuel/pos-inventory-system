@@ -26,6 +26,8 @@ export default function LoginPage() {
     try {
       // 1. Trigger the logic tier
       const data = await loginUser(email, password);
+
+      localStorage.setItem("user", JSON.stringify(data.user));
       
       // 2. Extract the role from the successful response
       const userRole = data.user.role; 
