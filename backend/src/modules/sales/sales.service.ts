@@ -4,6 +4,7 @@ import { Sale } from './entities/sale.entity';
 import { SaleLine } from './entities/sale-line.entity';
 import { CreateSaleDto } from './dto/create-sale.dto';
 import { InventoryService } from '../inventory/inventory.service';
+import { StockMovement, MovementType } from '../inventory/entities/stock-movement.entity';
 
 @Injectable()
 export class SalesService {
@@ -130,4 +131,51 @@ export class SalesService {
       total_amount: sale.total_amount
     };
   }
+
+  async refundSale(id: string) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // 1. Find the sale with its line items
+      const sale = await queryRunner.manager.findOne(Sale, {
+        where: { id },
+        relations: ['lines'],
+      });
+
+      if (!sale) throw new NotFoundException('Sale record not found');
+
+      // 2. Loop through lines to restore stock
+      for (const line of sale.lines) {
+        // Increment the quantity available in stock_items
+        await this.inventoryService.updateStock(line.sku_id, Number(line.quantity));
+
+        // 3. Log the 'RETURN' movement for the Audit Trail
+        const movement = queryRunner.manager.create(StockMovement, {
+          sku_id: line.sku_id,
+          quantity: Number(line.quantity),
+          reason: `Refund processed for Receipt: ${sale.receipt_id}`,
+          movement_type: MovementType.RETURN,
+        });
+        await queryRunner.manager.save(movement);
+      }
+
+      // 4. Update the sale status (Optional: add a 'status' column to Sale entity later)
+      // For now, we will leave the sale record but the inventory is restored.
+
+      await queryRunner.commitTransaction();
+      return { 
+        message: 'Refund successful', 
+        receipt_no: sale.receipt_id,
+        restored_items: sale.lines.length 
+      };
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw new BadRequestException(`Refund Failed: ${err.message}`);
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
 }
