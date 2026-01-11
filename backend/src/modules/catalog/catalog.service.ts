@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Product } from './entities/product.entity';
@@ -33,6 +33,28 @@ export class CatalogService {
 
   async findAllProducts() {
     return this.productRepo.find({ relations: ['skus'] });
+  }
+
+  async updateProduct(id: string, dto: Partial<CreateProductDto>) {
+    const product = await this.productRepo.findOne({ where: { id } });
+    if (!product) throw new NotFoundException(`Product with ID ${id} not found`);
+
+    // Merge changes
+    Object.assign(product, {
+      name: dto.name ?? product.name,
+      description: dto.description ?? product.description,
+      active: dto.active ?? product.active
+    });
+
+    return await this.productRepo.save(product);
+  }
+
+  async deleteProduct(id: string) {
+    const product = await this.productRepo.findOne({ where: { id } });
+    if (!product) throw new Error('Product not found');
+    // Optional: Soft delete by setting active to false
+    product.active = false;
+    return this.productRepo.save(product);
   }
 
   async findSkuByCode(skuCode: string) {

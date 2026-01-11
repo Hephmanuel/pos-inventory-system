@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { StockItem } from './entities/stock-item.entity';
 import { StockMovement, MovementType } from './entities/stock-movement.entity';
 import { AdjustStockDto } from './dto/adjust-stock.dto';
+import { Sku } from '../catalog/entities/sku.entity';
 
 @Injectable()
 export class InventoryService {
@@ -15,20 +16,17 @@ export class InventoryService {
 
 
   async deductStock(sku_id: string, quantity: number, manager: any) {
-    //Find the item using the manager
+    // 1. Find the stock item
     const item = await manager.findOne(StockItem, { where: { sku_id } });
+    if (!item) throw new NotFoundException(`Item with SKU ${sku_id} not found.`);
 
-    if (!item) {
-      throw new NotFoundException(`Item with SKU ${sku_id} not found in inventory.`);
-    }
+    // 2. NEW: Find the SKU to get the REAL price
+    const sku = await manager.findOne(Sku, { where: { id: sku_id } });
+    if (!sku) throw new NotFoundException(`SKU details not found.`);
 
-    //Check if we have enough stock (Convert to Number because decimals return as strings)
     const available = Number(item.quantity_available);
-    if (available < quantity) {
-      throw new Error(`Insufficient stock for ${sku_id}. Available: ${available}, Requested: ${quantity}`);
-    }
+    if (available < quantity) throw new Error(`Insufficient stock.`);
 
-    //Deduct the stock
     item.quantity_available = available - quantity;
     await manager.save(item);
 
@@ -42,7 +40,7 @@ export class InventoryService {
     await manager.save(movement);
 
     //Return a fake price as requested
-    return { price: 2500.00 }; 
+    return { price: Number(sku.base_price) };
   }
 
   async getStockLevels() {

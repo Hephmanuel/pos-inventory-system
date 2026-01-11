@@ -93,6 +93,26 @@ export class SalesService {
     }
   }
 
+  async findAll() {
+  const sales = await this.dataSource.getRepository(Sale).find({
+    select: {
+      id: true,
+      receipt_id: true,
+      total_amount: true,
+      employee_id: true,
+      created_at: true,
+    },
+    relations: ['lines'],
+    order: { created_at: 'DESC' },
+  });
+
+  // Map to match the 'receipt_no' naming used in other endpoints
+  return sales.map(sale => ({
+    ...sale,
+    receipt_no: sale.receipt_id
+  }));
+}
+
   // Kept this for re-printing or history purposes
   async getReceipt(id: string) {
     const sale = await this.dataSource.getRepository(Sale).findOne({

@@ -3,6 +3,7 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -21,7 +22,22 @@ async function bootstrap() {
   });
 
   // 2. Set Global Prefix
-  app.setGlobalPrefix('api/v1'); 
+  app.setGlobalPrefix('api/v1');
+  
+  // SWAGGER SETUP
+  const config = new DocumentBuilder()
+    .setTitle('SwiftPOS API')
+    .setDescription('The functional API documentation for the SwiftPOS inventory and sales system.')
+    .setVersion('1.0')
+    .addTag('auth', 'Staff authentication')
+    .addTag('sales', 'POS transaction processing')
+    .addTag('reports', 'Analytics and summaries')
+    .addTag('inventory', 'Stock management')
+    .build();
+    
+  const document = SwaggerModule.createDocument(app, config);
+  // This makes your docs available at http://localhost:3001/api/docs
+  SwaggerModule.setup('api/docs', app, document);
 
   // 3. Set Global Pipes
   app.useGlobalPipes(new ValidationPipe({ 
