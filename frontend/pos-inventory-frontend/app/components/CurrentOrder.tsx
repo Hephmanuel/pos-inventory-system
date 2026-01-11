@@ -28,7 +28,7 @@ export default function CurrentOrder({ items, setItems, onCompletePayment }: Cur
 
   return (
     /* Width 400px as per your design, h-full to span from header to bottom */
-    <div className="w-100 bg-white h-full flex flex-col p-4">
+    <div className="w-88 bg-white h-full flex flex-col p-4 rounded-lg">
       <h2 className="text-xl font-bold mb-6">Current Order</h2>
       
       {/* Scrollable Cart Items */}

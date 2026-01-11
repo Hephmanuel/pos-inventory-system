@@ -55,10 +55,9 @@ export default function POSHeader({ isSidebarOpen, onToggle }: HeaderProps) {
             {/* 4. Display the actual logged-in user name and role */}
             <p className="font-bold text-slate-800 text-xs leading-none">
             {user.full_name}
-            </p>
-            <p className="text-[10px] text-gray-400 mt-1 text-right capitalize">
-              {user.role}
-            </p>
+          </p>
+          <p className="text-[10px] text-gray-400 mt-1 text-right capitalize">
+            {user.role}</p>
           </div>
           <div className="w-9 h-9 bg-gray-200 rounded-full overflow-hidden" />
         </div>
