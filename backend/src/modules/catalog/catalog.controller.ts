@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { Controller, Post, Get, Body, Patch, Param } from '@nestjs/common';
+import { Controller, Post, Get, Body, Patch, Param, Delete } from '@nestjs/common';
 import { CatalogService } from './catalog.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
