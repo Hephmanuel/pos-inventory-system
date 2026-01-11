@@ -23,6 +23,9 @@ export default function RefundModal({ isOpen, onClose, receiptId }: RefundModalP
 
   // 2. The Refund Trigger
   const handleRefund = async () => {
+    // Double-check: Stop if already refunded (prevents clicking if enabled by mistake)
+    if (receiptData?.status === 'REFUNDED') return;
+
     if (!confirm("Are you sure you want to refund this entire transaction?")) return;
     
     setIsLoading(true);
@@ -40,14 +43,25 @@ export default function RefundModal({ isOpen, onClose, receiptId }: RefundModalP
 
   if (!isOpen) return null;
 
+  // Helper boolean for cleaner JSX
+  const isRefunded = receiptData?.status === 'REFUNDED';
+
   return (
     <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
         <div className="p-8">
           <div className="flex justify-between items-start mb-6">
             <div>
-              <h2 className="text-2xl font-bold text-slate-800">{receiptData?.receipt_no || "Loading..."}</h2>
-              <p className="text-gray-400 text-xs">
+              <div className="flex items-center gap-3">
+                <h2 className="text-2xl font-bold text-slate-800">{receiptData?.receipt_no || "Loading..."}</h2>
+                {/* Optional: Add a visible badge in the header as well */}
+                {isRefunded && (
+                  <span className="text-[10px] bg-red-100 text-red-600 px-2 py-1 rounded font-bold uppercase tracking-wide border border-red-200">
+                    Refunded
+                  </span>
+                )}
+              </div>
+              <p className="text-gray-400 text-xs mt-1">
                 {receiptData ? new Date(receiptData.date).toLocaleString() : ""}
               </p>
             </div>
@@ -82,7 +96,7 @@ export default function RefundModal({ isOpen, onClose, receiptId }: RefundModalP
           <div className="flex justify-between items-end">
             <div className="space-y-1">
               <p className="text-xs text-gray-500 font-bold uppercase">Total Amount</p>
-              <p className="text-xl font-black text-gray-900">
+              <p className={`text-xl font-black ${isRefunded ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
                 NGN {Number(receiptData?.total_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
               </p>
             </div>
@@ -92,10 +106,16 @@ export default function RefundModal({ isOpen, onClose, receiptId }: RefundModalP
               </button>
               <button 
                 onClick={handleRefund}
-                disabled={isLoading}
-                className={`px-8 py-3 ${isLoading ? 'bg-gray-400' : 'bg-[#0066FF]'} text-white rounded-lg font-bold hover:bg-blue-700 transition-colors`}
+                // 🔒 Lock the button if loading OR already refunded
+                disabled={isLoading || isRefunded}
+                className={`px-8 py-3 rounded-lg font-bold text-white transition-colors ${
+                  isLoading || isRefunded 
+                    ? 'bg-gray-300 cursor-not-allowed text-gray-500' // Disabled Style
+                    : 'bg-[#0066FF] hover:bg-blue-700' // Active Style
+                }`}
               >
-                {isLoading ? "Processing..." : "Return/Refund"}
+                {/* 🔒 Dynamic Text Label */}
+                {isLoading ? "Processing..." : isRefunded ? "Refunded" : "Return/Refund"}
               </button>
             </div>
           </div>

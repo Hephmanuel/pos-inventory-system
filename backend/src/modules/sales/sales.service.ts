@@ -60,11 +60,9 @@ export class SalesService {
       }
 
       // 3. Update the Sale with the final total and the formatted Receipt ID
-      // Assuming 'receipt_index' is an auto-incrementing column in your DB
       savedSale.total_amount = runningTotal;
       
       // Generate the human-readable ID (e.g., RCT-001)
-      // Note: savedSale.receipt_index is populated by the DB after the first save
       const formattedId = `RCT-${savedSale.receipt_index.toString().padStart(3, '0')}`;
       savedSale.receipt_id = formattedId;
 
@@ -72,7 +70,7 @@ export class SalesService {
 
       await queryRunner.commitTransaction();
 
-      // 4. Return the "Option 1" Rich Response (Everything the frontend needs)
+      // 4. Return the "Option 1" Rich Response
       return {
         message: 'Checkout Successful',
         receipt: {
@@ -95,24 +93,25 @@ export class SalesService {
   }
 
   async findAll() {
-  const sales = await this.dataSource.getRepository(Sale).find({
-    select: {
-      id: true,
-      receipt_id: true,
-      total_amount: true,
-      employee_id: true,
-      created_at: true,
-    },
-    relations: ['lines'],
-    order: { created_at: 'DESC' },
-  });
+    const sales = await this.dataSource.getRepository(Sale).find({
+      select: {
+        id: true,
+        receipt_id: true,
+        total_amount: true,
+        employee_id: true,
+        created_at: true,
+        status: true, // ⬅️ FIXED: Added this so frontend sees the status
+      },
+      relations: ['lines'],
+      order: { created_at: 'DESC' },
+    });
 
-  // Map to match the 'receipt_no' naming used in other endpoints
-  return sales.map(sale => ({
-    ...sale,
-    receipt_no: sale.receipt_id
-  }));
-}
+    // Map to match the 'receipt_no' naming used in other endpoints
+    return sales.map(sale => ({
+      ...sale,
+      receipt_no: sale.receipt_id
+    }));
+  }
 
   // Kept this for re-printing or history purposes
   async getReceipt(id: string) {
@@ -128,7 +127,8 @@ export class SalesService {
       receipt_no: sale.receipt_id,
       date: sale.created_at,
       items: sale.lines,
-      total_amount: sale.total_amount
+      total_amount: sale.total_amount,
+      status: sale.status // Ensure status is returned here too
     };
   }
 
@@ -145,9 +145,9 @@ export class SalesService {
       });
 
       if (!sale) throw new NotFoundException('Sale record not found');
-      
+
+      // 🛑 FIXED: Removed the manual rollback here to prevent double-rollback crash
       if (sale.status === 'REFUNDED') {
-        await queryRunner.rollbackTransaction();
         throw new BadRequestException('This transaction has already been refunded.');
       }
 
@@ -169,9 +169,6 @@ export class SalesService {
       sale.status = 'REFUNDED';
       await queryRunner.manager.save(sale);
 
-      // 4. Update the sale status (Optional: add a 'status' column to Sale entity later)
-      // For now, we will leave the sale record but the inventory is restored.
-
       await queryRunner.commitTransaction();
       return { 
         message: 'Refund successful', 
@@ -179,11 +176,10 @@ export class SalesService {
         restored_items: sale.lines.length 
       };
     } catch (err) {
-      await queryRunner.rollbackTransaction();
+      await queryRunner.rollbackTransaction(); // <--- This handles ALL rollbacks now
       throw new BadRequestException(`Refund Failed: ${err.message}`);
     } finally {
       await queryRunner.release();
     }
   }
-
 }

@@ -28,10 +28,20 @@ export default function ReceiptTable({ receipts, isLoading, onRowClick }: Receip
               <tr 
                 key={receipt.id} 
                 onClick={() => onRowClick(receipt.id)} 
-                className="hover:bg-blue-50/50 cursor-pointer transition-colors group"
+                className={`hover:bg-blue-50/50 cursor-pointer transition-colors group ${
+                  // 🔒 Dim the row if it is already refunded
+                  receipt.status === 'REFUNDED' ? 'opacity-60 bg-gray-50' : ''
+                }`}
               >
-                <td className="px-8 py-4 text-[11px] text-blue-600 font-bold underline-offset-4 group-hover:underline">
+                <td className="px-8 py-4 text-[11px] text-blue-600 font-bold underline-offset-4 group-hover:underline flex items-center justify-center gap-2">
                   {receipt.receipt_no || "N/A"}
+                  
+                  {/* 🏷️ The Visual Badge */}
+                  {receipt.status === 'REFUNDED' && (
+                    <span className="text-[9px] bg-red-100 text-red-600 px-2 py-0.5 rounded-full border border-red-200 uppercase tracking-wide">
+                      Refunded
+                    </span>
+                  )}
                 </td>
                 <td className="px-8 py-4 text-[11px] text-gray-500 font-medium">
                   {new Date(receipt.created_at).toLocaleDateString()}
@@ -39,7 +49,10 @@ export default function ReceiptTable({ receipts, isLoading, onRowClick }: Receip
                 <td className="px-8 py-4 text-[11px] text-gray-500">
                   {receipt.lines?.length || 0} Items
                 </td>
-                <td className="px-8 py-4 text-[11px] font-bold">
+                <td className={`px-8 py-4 text-[11px] font-bold ${
+                  // 🔒 Strike-through the price for refunded items
+                  receipt.status === 'REFUNDED' ? 'line-through text-gray-400' : ''
+                }`}>
                   NGN {Number(receipt.total_amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </td>
               </tr>
