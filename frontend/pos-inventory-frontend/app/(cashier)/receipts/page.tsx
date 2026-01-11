@@ -4,11 +4,13 @@ import { useState } from "react";
 import SearchBar from "@/app/components/SearchBar";
 import ReceiptTable from "@/app/components/ReceiptTable";
 import RefundModal from "@/app/components/RefundModal";
-import { ChevronRight } from "lucide-react";
 
 export default function ReceiptsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState<string | null>(null);
+  
+  // 🔥 FIX: Add state for the search bar
+  const [searchQuery, setSearchQuery] = useState(""); 
 
   const handleOpenRefund = (id: string) => {
     setSelectedReceipt(id);
@@ -19,7 +21,12 @@ export default function ReceiptsPage() {
     <div className="flex flex-col h-full">
       <div className="flex justify-between items-center mb-4">
         <div className="w-1/2 p-4">
-          <SearchBar placeholder="Search Receipt by number or date..." />
+          {/* 🔥 FIX: Provide the required value and onChange props */}
+          <SearchBar 
+            placeholder="Search Receipt by number or date..." 
+            value={searchQuery}
+            onChange={setSearchQuery}
+          />
         </div>
         <div className="relative">
           <select 
@@ -30,11 +37,10 @@ export default function ReceiptsPage() {
             <option value="week">This Week</option>
             <option value="month">This Month</option>
           </select>
-          
         </div>
       </div>
 
-      {/* When a row is clicked, it triggers the refund flow */}
+      {/* Passing the searchQuery to the table to allow live filtering later */}
       <ReceiptTable onRowClick={handleOpenRefund} />
 
       <RefundModal 
