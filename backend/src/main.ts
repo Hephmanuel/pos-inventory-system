@@ -39,7 +39,7 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   // This makes your docs available at http://localhost:3001/api/docs
   SwaggerModule.setup('api/docs', app, document);
-
+    
   // 3. Set Global Pipes
   app.useGlobalPipes(new ValidationPipe({ 
     whitelist: true, 
