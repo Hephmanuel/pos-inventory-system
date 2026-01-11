@@ -18,7 +18,7 @@ export default function CashierLayout({ children }: { children: React.ReactNode 
         {/* Header receives the state and the toggle function */}
         <POSHeader isSidebarOpen={isSidebarOpen} onToggle={toggleSidebar} />
 
-        <main className="flex-1 overflow-hidden z-0 bg-[#E5E5E5]">
+        <main className="flex-1 overflow-hidden z-0 bg-linear-to-l from-blue-200 to-blue-400 p-6">
           {children}
         </main>
       </div>

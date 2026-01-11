@@ -26,7 +26,7 @@ const data = [
 
 export default function SalesChart() {
   return (
-    <div className='h-[260px]'>
+    <div className='h-65'>
       <ResponsiveContainer width='100%' height='100%'>
         <AreaChart data={data}>
           {/* Gradient */}

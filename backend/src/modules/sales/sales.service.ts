@@ -145,6 +145,11 @@ export class SalesService {
       });
 
       if (!sale) throw new NotFoundException('Sale record not found');
+      
+      if (sale.status === 'REFUNDED') {
+        await queryRunner.rollbackTransaction();
+        throw new BadRequestException('This transaction has already been refunded.');
+      }
 
       // 2. Loop through lines to restore stock
       for (const line of sale.lines) {
