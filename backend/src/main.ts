@@ -16,7 +16,8 @@ async function bootstrap() {
       'http://localhost:3000',      // Allows Frontend devs working locally
       'http://127.0.0.1:3000',      // Safety net: some systems use IP instead of "localhost"
       'https://pos-inventory-system-r7w8.onrender.com', // Allows the backend to talk to itself (for health checks dont worry)
-      // FUTURE TODO: Add the deployed frontend url here
+      'https://pos-inventory-system-eight.vercel.app',
+      'https://pos-inventory-system-eight.vercel.app/'// allows backend to talk to frontend deployed on vercel
     ], 
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
