@@ -112,7 +112,7 @@ export default function POSPage() {
         />
       </div>
 
-      <div className="h-full border-l border-gray-200 bg-white">
+      <div className="h-full border-l rounded-lg border-gray-200 bg-white">
         <CurrentOrder 
           items={cartItems} 
           setItems={setCartItems}
@@ -127,6 +127,7 @@ export default function POSPage() {
           setCartItems([]); 
         }} 
         totalAmount={totalAmount}
+        cartItems={cartItems}
       />
 
       {isProcessing && (

@@ -27,8 +27,8 @@ export default function CurrentOrder({ items, setItems, onCompletePayment }: Cur
   }
 
   return (
-    /* Width 400px as per your design, h-full to span from header to bottom */
-    <div className="w-88 bg-white h-full flex flex-col p-4 rounded-lg">
+ 
+    <div className="w-88 bg-white h-full flex flex-col p-4">
       <h2 className="text-xl font-bold mb-6">Current Order</h2>
       
       {/* Scrollable Cart Items */}
@@ -44,14 +44,15 @@ export default function CurrentOrder({ items, setItems, onCompletePayment }: Cur
             <div className="flex items-center gap-3">
 
               <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-lg">
+                   <button onClick={() => updateQty(item.id, -1)}
+                    className="w-6 h-6 bg-white shadow-sm rounded flex items-center justify-center hover:bg-gray-50">
+                    <Minus size={12}/>
+                  </button>
+                  <span className="text-sm font-bold w-4 text-center">{item.qty}</span>
+                 
                   <button onClick={() => updateQty(item.id, 1)}
                     className="w-6 h-6 bg-white shadow-sm rounded flex items-center justify-center hover:bg-gray-50">
                     <Plus size={12}/>
-                  </button>
-                  <span className="text-sm font-bold w-4 text-center">{item.qty}</span>
-                  <button onClick={() => updateQty(item.id, -1)}
-                    className="w-6 h-6 bg-white shadow-sm rounded flex items-center justify-center hover:bg-gray-50">
-                    <Minus size={12}/>
                   </button>
               </div>
 

@@ -24,3 +24,24 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@media print {
+  /* Hide every part of the dashboard and the modal UI */
+  body * {
+    visibility: hidden;
+  }
+  
+  /* Show only the receipt container and its content */
+  #receipt-print, #receipt-print * {
+    visibility: visible;
+  }
+  
+  /* Position the receipt at the very top-left of the paper */
+  #receipt-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    display: block !important;
+  }
+}
