@@ -24,7 +24,7 @@ export class CatalogController {
   @ApiResponse({ status: 200, description: 'Products retrieved successfully' })
   @ApiResponse({ status: 404, description: 'No products found' })
   findAll() {
-    return this.catalogService.findAllProducts();
+    return this.catalogService.findAll();
   }
 
   @Get('skus/:sku_code')

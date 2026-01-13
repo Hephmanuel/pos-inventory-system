@@ -57,15 +57,16 @@ export class InventoryService {
       },
     });
 
-    return skus.map(sku => {
-      const s = sku as any; 
-      const quantity = s.stock_item ? Number(s.stock_item.quantity_available) : 0;
-      const reorderPoint = s.reorder_point || 10;
-      const skuCode = s.code || s.sku_code || 'UNKNOWN';
+    // Map result to the format expected by the frontend
+    const stockData = skus.map(sku => {
+      const quantity = sku.stock_item ? Number(sku.stock_item.quantity_available) : 0;
+      // Default reorder point logic
+      const reorderPoint = 10; 
 
       return {
-        sku_code: skuCode,
-        product_name: s.product.name,
+        sku_id: sku.id,
+        sku_code: sku.sku_code || 'UNKNOWN',
+        product_name: sku.product.name,
         quantity_available: quantity,
         reorder_point: reorderPoint,
         status: quantity === 0 
@@ -75,6 +76,9 @@ export class InventoryService {
             : 'IN_STOCK'
       };
     });
+
+    // We return the array directly so stockLevels.forEach works in the frontend
+    return stockData;
   }
 
   // 3. UPDATE STOCK
