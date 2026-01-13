@@ -9,6 +9,13 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // DEBUG BLOCK
+  const dbUrl = process.env.DATABASE_URL;
+  console.log('------------------------------------------------');
+  console.log('CONNECTING TO DB:', dbUrl ? dbUrl.split('@')[1] : 'UNDEFINED'); 
+  console.log('------------------------------------------------');
+  // (We split by '@' to show the host without revealing the password)
+
   // 1. Enable CORS - This allows your frontend to talk to the backend
   app.enableCors({
     // I switched from 'true' because some browsers/proxies strip it in production.

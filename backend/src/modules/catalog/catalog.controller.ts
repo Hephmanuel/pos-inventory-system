@@ -15,8 +15,8 @@ export class CatalogController {
   @ApiOperation({ summary: 'Create a new product with SKUs' })
   @ApiResponse({ status: 201, description: 'Product and SKUs created successfully' })
   @ApiResponse({ status: 400, description: 'Bad Request' })
-  create(@Body() body: CreateProductDto) {
-    return this.catalogService.createProductWithSkus(body);
+  create(@Body() createProductDto: CreateProductDto) {
+    return this.catalogService.create(createProductDto);
   }
 
   @Get('products')
@@ -24,7 +24,7 @@ export class CatalogController {
   @ApiResponse({ status: 200, description: 'Products retrieved successfully' })
   @ApiResponse({ status: 404, description: 'No products found' })
   findAll() {
-    return this.catalogService.findAllProducts();
+    return this.catalogService.findAll();
   }
 
   @Get('skus/:sku_code')
