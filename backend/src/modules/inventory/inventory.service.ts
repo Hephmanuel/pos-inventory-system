@@ -39,7 +39,7 @@ export class InventoryService {
 
     // Cast to any to safely access price if needed
     const sku = await manager.findOne(Sku, { where: { id: sku_id } });
-    return { price: Number(sku.price || 0) };
+    return { price: Number(sku.base_price || 0) };
   }
 
   // 2. GET STOCK LEVELS (Fixed for TS Errors)
