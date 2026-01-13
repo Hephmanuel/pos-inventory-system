@@ -6,6 +6,7 @@ import '../globals.css';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useRouter } from 'next/navigation';
+import { useStaffProfile } from '@/app/(Manager profiling )/useStaffProfile';
 
 const montserrat = Montserrat({
   weight: '400',
@@ -19,6 +20,7 @@ export default function Dashboardlayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { user, loading } = useStaffProfile();
 
   const navItem = (href: string, label: string) => {
     const active = pathname === href;
@@ -26,7 +28,9 @@ export default function Dashboardlayout({
       <Link
         href={href}
         className={`block text-center py-3 text-sm font-medium ${
-          active ? 'bg-blue-600 text-white' : 'text-gray-700 hover:bg-gray-100'
+          active
+            ? 'bg-blue-600 text-white font-bold'
+            : 'text-gray-700 hover:bg-gray-100'
         }`}
       >
         {label}
@@ -59,7 +63,22 @@ export default function Dashboardlayout({
                 <path d='M20 21a8 8 0 0 0-16 0' />
               </svg>
             </div>
-            <div></div>
+            <div>
+              {loading ? (
+                <div className='text-sm text-gray-400'>Loading...</div>
+              ) : user ? (
+                <>
+                  <div className='font-semibold text-black leading-tight'>
+                    {user.first_name} {user.last_name}
+                  </div>
+                  <div className='text-xs text-gray-500 capitalize'>
+                    {user.role}
+                  </div>
+                </>
+              ) : (
+                <div className='text-sm text-red-500'>No active user</div>
+              )}
+            </div>
           </div>
 
           {/* NAV */}
@@ -99,7 +118,7 @@ export default function Dashboardlayout({
               />
             </svg>
 
-            <span>Logout</span>
+            <span className='font-bold'>Logout</span>
           </button>
         </div>
       </aside>

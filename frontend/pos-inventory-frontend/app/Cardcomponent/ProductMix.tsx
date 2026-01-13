@@ -4,29 +4,47 @@ import { useEffect, useState } from 'react';
 import { baseURL } from '@/app/constant';
 import { motion } from 'framer-motion';
 
+type ProductMixItem = {
+  sku_id: string;
+  product_name: string;
+  total_quantity_sold: number;
+  total_revenue: number;
+};
+
 export default function ProductMix() {
-  const [data, setData] = useState<any[]>([]);
+  const [data, setData] = useState<ProductMixItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  function toMMDDYYYY(d: Date) {
-    return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
+  function toMMDDYYYY(date: Date) {
+    const mm = String(date.getMonth() + 1).padStart(2, '0');
+    const dd = String(date.getDate()).padStart(2, '0');
+    const yyyy = date.getFullYear();
+    return `${mm}/${dd}/${yyyy}`;
   }
 
   useEffect(() => {
     async function load() {
-      const end = new Date();
-      const start = new Date();
-      start.setDate(end.getDate() - 7);
+      try {
+        const end = new Date();
+        const start = new Date();
+        start.setDate(end.getDate() - 7);
 
-      const res = await fetch(
-        `${baseURL}/reports/top-selling-products?limit=5&start_date=${toMMDDYYYY(
-          start
-        )}&end_date=${toMMDDYYYY(end)}`
-      );
+        const res = await fetch(
+          `${baseURL}/reports/top-selling-products?limit=5&start_date=${toMMDDYYYY(
+            start
+          )}&end_date=${toMMDDYYYY(end)}`
+        );
 
-      const json = await res.json();
-      setData(json || []);
-      setLoading(false);
+        if (!res.ok) throw new Error('Failed to fetch product mix');
+
+        const json: ProductMixItem[] = await res.json();
+        setData(json);
+      } catch (error) {
+        console.error('Product mix error:', error);
+        setData([]);
+      } finally {
+        setLoading(false);
+      }
     }
 
     load();
@@ -36,7 +54,10 @@ export default function ProductMix() {
     return <p className='text-gray-400'>Loading product mix...</p>;
   }
 
-  const total = data.reduce((a, b) => a + b.revenue, 0);
+  const totalRevenue = data.reduce(
+    (sum, item) => sum + Number(item.total_revenue ?? 0),
+    0
+  );
 
   return (
     <motion.div
@@ -47,31 +68,37 @@ export default function ProductMix() {
       <div className='text-blue-500'>
         <svg
           xmlns='http://www.w3.org/2000/svg'
-          width='34'
-          height='34'
+          width='40'
+          height='40'
           viewBox='0 0 24 24'
           fill='none'
           stroke='currentColor'
           strokeWidth='2'
           strokeLinecap='round'
           strokeLinejoin='round'
-          className='lucide lucide-shopping-cart-icon lucide-shopping-cart'
         >
           <circle cx='8' cy='21' r='1' />
           <circle cx='19' cy='21' r='1' />
           <path d='M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12' />
         </svg>
       </div>
-      <h3 className='font-semibold text-gray-800'>Product Mix (Last 7 Days)</h3>
+
+      <h3 className='font-semibold text-gray-800 '>
+        Product Mix (Last 7 Days)
+      </h3>
 
       <div className='space-y-3'>
-        {data.map((p, i) => {
+        {data.map((item) => {
+          const revenue = Number(item.total_revenue ?? 0);
           const percent =
-            total === 0 ? 0 : ((p.revenue / total) * 100).toFixed(1);
+            totalRevenue > 0
+              ? ((revenue / totalRevenue) * 100).toFixed(1)
+              : '0.0';
+
           return (
-            <div key={i} className='space-y-1'>
+            <div key={item.sku_id} className='space-y-1'>
               <div className='flex justify-between text-sm'>
-                <span>{p.product_name}</span>
+                <span>{item.product_name}</span>
                 <span>{percent}%</span>
               </div>
 
@@ -80,7 +107,7 @@ export default function ProductMix() {
                   initial={{ width: 0 }}
                   animate={{ width: `${percent}%` }}
                   transition={{ duration: 0.7 }}
-                  className='bg-blue-500 h-3 rounded'
+                  className='bg-linear-to-br from-blue-400 via-blue-500 to-blue-600 h-3 rounded'
                 />
               </div>
             </div>
