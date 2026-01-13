@@ -32,4 +32,13 @@ export class SalesController {
   getReceipt(@Param('id') id: string) {
     return this.salesService.getReceipt(id);
   }
+
+  @Post(':id/refund')
+  @ApiOperation({ summary: 'Process a refund and return items to stock' })
+  @ApiResponse({ status: 201, description: 'Refund processed successfully' })
+  @ApiResponse({ status: 400, description: 'Bad Request' })
+  processRefund(@Param('id') id: string) {
+    return this.salesService.refundSale(id);
+  }
+
 }

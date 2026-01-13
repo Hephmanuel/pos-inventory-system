@@ -33,6 +33,8 @@ export class ReportsService {
   async getTopSellingProducts(limit = 5, startDate?: string, endDate?: string) {
     const query = this.dataSource.getRepository(SaleLine)
       .createQueryBuilder('line')
+      .leftJoin('line.sale', 'sale')
+      .where('sale.status != :status', { status: 'REFUNDED' })
       .select('line.sku_id', 'sku_id')
       .addSelect('SUM(line.quantity)', 'total_quantity_sold')
       .addSelect('SUM(line.quantity * line.unit_price)', 'total_revenue')
@@ -44,7 +46,7 @@ export class ReportsService {
       const s = new Date(startDate);
       const e = new Date(endDate);
       if (!isNaN(s.getTime()) && !isNaN(e.getTime())) {
-        query.where('line.created_at BETWEEN :start AND :end', { start: s, end: e });
+        query.andWhere('line.created_at BETWEEN :start AND :end', { start: s, end: e }); 
       }
     }
 
@@ -72,7 +74,8 @@ export class ReportsService {
       .createQueryBuilder('sale')
       .leftJoinAndSelect('sale.lines', 'line')
       .where('sale.created_at BETWEEN :start AND :end', { start, end })
-      .getMany();
+      .andWhere("sale.status != :status", { status: 'REFUNDED' }) // Filter applied
+      .getMany(); // Execute the query
 
     const total_revenue = result.reduce((acc, sale) => acc + Number(sale.total_amount), 0);
     const total_items_sold = result.reduce((acc, sale) => 
@@ -98,6 +101,7 @@ export class ReportsService {
       .select("DATE(sale.created_at)", "date")
       .addSelect("SUM(sale.total_amount)", "revenue")
       .where("sale.created_at BETWEEN :start AND :end", { start: s, end: e })
+      .andWhere("sale.status != 'REFUNDED'")
       .groupBy("DATE(sale.created_at)")
       .orderBy("date", "ASC")
       .getRawMany();

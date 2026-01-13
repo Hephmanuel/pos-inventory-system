@@ -1,9 +1,13 @@
-import { Entity, Column, Index } from 'typeorm';
-import { BaseEntity } from '../../../common/entities/base.entity';
+import { Entity, Column, Index, OneToOne, JoinColumn, BaseEntity, PrimaryGeneratedColumn } from 'typeorm'; 
+import { Sku } from '../../catalog/entities/sku.entity';
 
 @Entity('stock_items')
 @Index(['sku_id', 'store_id'], { unique: true })
 export class StockItem extends BaseEntity {
+  
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
+
   @Column()
   sku_id: string; 
 
@@ -18,4 +22,8 @@ export class StockItem extends BaseEntity {
 
   @Column({ name: 'location', nullable: true })
   location: string;
+
+  @OneToOne(() => Sku, (sku) => sku.stock_item)
+  @JoinColumn({ name: 'sku_id' })
+  sku: Sku;
 }

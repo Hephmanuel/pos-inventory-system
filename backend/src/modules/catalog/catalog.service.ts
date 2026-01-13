@@ -31,8 +31,14 @@ export class CatalogService {
     return {message: 'Product and SKUs created successfully', product: savedProduct, skus: skuEntities};
   }
 
-  async findAllProducts() {
-    return this.productRepo.find({ relations: ['skus'] });
+  async findAll(showAll: boolean = false) {
+    const whereCondition = showAll ? {} : { active: true };
+
+    return this.productRepo.find({
+      where: whereCondition,
+      relations: ['skus'],
+      order: { name: 'ASC' },
+    });
   }
 
   async updateProduct(id: string, dto: Partial<CreateProductDto>) {

@@ -1,1 +1,1 @@
-export const baseURL = 'https://pos-inventory-system-r7w8.onrender.com/api/v1';
+export const baseURL = process.env.NEXT_PUBLIC_API_URL || 'https://pos-inventory-system-r7w8.onrender.com/api/v1';

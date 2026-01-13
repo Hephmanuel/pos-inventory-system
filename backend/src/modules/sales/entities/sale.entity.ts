@@ -18,5 +18,8 @@ export class Sale extends BaseEntity {
   total_amount: number; 
 
   @OneToMany(() => SaleLine, (line) => line.sale)
-  lines: SaleLine[]; 
+  lines: SaleLine[];
+  
+  @Column({ default: 'PAID' })
+  status: string;
 }

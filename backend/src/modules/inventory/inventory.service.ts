@@ -1,85 +1,95 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { StockItem } from './entities/stock-item.entity';
 import { StockMovement, MovementType } from './entities/stock-movement.entity';
-import { AdjustStockDto } from './dto/adjust-stock.dto';
-import { Sku } from '../catalog/entities/sku.entity';
+import { Sku } from '../catalog/entities/sku.entity'; 
 
 @Injectable()
 export class InventoryService {
   constructor(
-    @InjectRepository(StockItem) 
-    private stockItemRepo: Repository<StockItem>, // Removed duplicate stockRepo injection
-    @InjectRepository(StockMovement) 
+    @InjectRepository(StockItem)
+    private stockItemRepo: Repository<StockItem>,
+    @InjectRepository(StockMovement)
     private movementRepo: Repository<StockMovement>,
+    private dataSource: DataSource,
   ) {}
 
+  // 1. DEDUCT STOCK
   async deductStock(sku_id: string, quantity: number, manager: any) {
     const item = await manager.findOne(StockItem, { where: { sku_id } });
-    if (!item) throw new NotFoundException(`Item with SKU ${sku_id} not found.`);
 
-    const sku = await manager.findOne(Sku, { where: { id: sku_id } });
-    if (!sku) throw new NotFoundException(`SKU details not found.`);
+    if (!item) throw new NotFoundException(`SKU ${sku_id} not found in inventory.`);
 
     const available = Number(item.quantity_available);
-    if (available < quantity) throw new Error(`Insufficient stock.`);
+    if (available < quantity) {
+      throw new BadRequestException(`Insufficient stock for SKU ${sku_id}.`);
+    }
 
     item.quantity_available = available - quantity;
     await manager.save(item);
 
     const movement = manager.create(StockMovement, {
       sku_id,
-      quantity: -quantity, 
+      quantity: -quantity,
       reason: 'Sale Transaction',
       movement_type: MovementType.SALE,
     });
     await manager.save(movement);
 
-    // Return the actual price from the database
-    return { price: Number(sku.base_price) };
+    // Cast to any to safely access price if needed
+    const sku = await manager.findOne(Sku, { where: { id: sku_id } });
+    return { price: Number(sku.base_price || 0) };
   }
 
+  // 2. GET STOCK LEVELS (Fixed for TS Errors)
   async getStockLevels() {
-    return await this.stockItemRepo.find();
+    // Get ALL SKUs for ACTIVE products only.
+    const skus = await this.dataSource.getRepository(Sku).find({
+      relations: ['product', 'stock_item'], 
+      where: {
+        product: {
+          active: true,
+        }
+      },
+      order: {
+        product: { name: 'ASC' },
+      },
+    });
+
+    // Map result to the format expected by the frontend
+    const stockData = skus.map(sku => {
+      const quantity = sku.stock_item ? Number(sku.stock_item.quantity_available) : 0;
+      // Default reorder point logic
+      const reorderPoint = 10; 
+
+      return {
+        sku_id: sku.id,
+        sku_code: sku.sku_code || 'UNKNOWN',
+        product_name: sku.product.name,
+        quantity_available: quantity,
+        reorder_point: reorderPoint,
+        status: quantity === 0 
+          ? 'OUT_OF_STOCK' 
+          : quantity <= reorderPoint 
+            ? 'LOW_STOCK' 
+            : 'IN_STOCK'
+      };
+    });
+
+    // We return the array directly so stockLevels.forEach works in the frontend
+    return stockData;
   }
 
-  async adjustStock(dto: AdjustStockDto) {
-    const { sku_id, quantity, reason } = dto;
-
-    let item = await this.stockItemRepo.findOne({ where: { sku_id } });
+  // 3. UPDATE STOCK
+  async updateStock(sku_id: string, quantity: number) {
+    const item = await this.stockItemRepo.findOne({ where: { sku_id } });
 
     if (!item) {
-      item = this.stockItemRepo.create({ 
-        sku_id, 
-        store_id: 'MAIN_STORE', 
-        quantity_available: 0,
-        quantity_reserved: 0 
-      });
+        throw new NotFoundException('Stock item not found. Please initialize stock first.');
     }
 
     item.quantity_available = Number(item.quantity_available) + quantity;
-    await this.stockItemRepo.save(item);
-
-    const movement = this.movementRepo.create({
-      sku_id,
-      quantity: quantity, 
-      reason,
-      movement_type: MovementType.ADJUSTMENT,
-    });
-    await this.movementRepo.save(movement);
-
-    return { 
-      message: 'Stock adjusted successfully', 
-      newItemBalance: item.quantity_available 
-    };
-  }
-
-  async updateStock(sku_id: string, qty: number) {
-    const item = await this.stockItemRepo.findOne({ where: { sku_id } });
-    if (!item) throw new NotFoundException('SKU not found');
-    
-    item.quantity_available = Number(item.quantity_available) + qty;
     return await this.stockItemRepo.save(item);
   }
 }
