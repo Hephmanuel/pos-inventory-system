@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import { Montserrat } from 'next/font/google';
+import '../globals.css';
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -58,16 +59,7 @@ export default function Dashboardlayout({
                 <path d='M20 21a8 8 0 0 0-16 0' />
               </svg>
             </div>
-            <div>
-              <p
-                className={`text-sm font-bold text-black ${montserrat.className}`}
-              >
-                Mercyford Okocha
-              </p>
-              <p className={`text-xs text-gray-500 ${montserrat.className}`}>
-                Manager
-              </p>
-            </div>
+            <div></div>
           </div>
 
           {/* NAV */}
@@ -82,6 +74,7 @@ export default function Dashboardlayout({
         <div className='border-t border-black p-4  space-y-3 text-sm'>
           {/* Logout button */}
           <button
+            suppressHydrationWarning
             onClick={() => router.push('/')}
             className={`flex items-center gap-2 text-black hover:text-red-400 ${montserrat.className}`}
           >
