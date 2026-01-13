@@ -1,15 +1,13 @@
-@import "tailwindcss";
-
-
+@import 'tailwindcss';
 
 :root {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  --primary: #0167FF;
-  --background: #B2D3EE;
+  --primary: #0167ff;
+  --background: #b2d3ee;
   --foreground: #1d293d;
-  --font: 'poppins', sans-serif, font-weight 700; 
+  --font: 'poppins', sans-serif, font-weight 700;
   --secondary-font: 'montserrat', sans-serif;
   --font-text: 'inter', sans-serif;
   --color-background: var(--background);
@@ -17,7 +15,117 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
+.animate-fadeIn {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.15s ease-out;
+}
+
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-slide {
+  animation: fadeSlideIn 0.25s ease-out;
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-4px);
+  }
+  40% {
+    transform: translateX(4px);
+  }
+  60% {
+    transform: translateX(-4px);
+  }
+  80% {
+    transform: translateX(4px);
+  }
+}
+
+.animate-shake {
+  animation: shake 0.4s ease-in-out;
+}
+
+.active-scale {
+  transition: transform 0.1s ease-in-out;
+}
+
+.active-scale:active {
+  transform: scale(0.95);
+}
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-modal-in {
+  animation: modalIn 0.2s ease-out;
+}
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+}
+
+@keyframes softPulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-soft-pulse {
+  animation: softPulse 1.2s ease-in-out infinite;
+}
 
 body {
   background: var(--background);

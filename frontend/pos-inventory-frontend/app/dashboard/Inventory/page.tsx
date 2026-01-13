@@ -4,11 +4,23 @@ import { Montserrat } from 'next/font/google';
 import { useState, useEffect } from 'react';
 import { baseURL } from '@/app/constant';
 import { useRef } from 'react';
+import '../../globals.css';
 
 const montserrat = Montserrat({
   weight: '400',
   subsets: ['latin'],
 });
+type InventoryRow = {
+  productId: string;
+  skuId: string;
+  sku: string;
+  product: string;
+  category: string;
+  stock: number;
+  price: number;
+  optimistic?: boolean;
+  rollback?: boolean; // 👈 PUT IT HERE
+};
 
 // CORS is a backend concern. Do not require or use server middleware in client components.
 //
@@ -27,6 +39,9 @@ export default function InventoryPage() {
   const [addStockOpen, setAddStockOpen] = useState(false); // Add stock modal
   const [shake, setShake] = useState(false); //Adding shake animations
   const fetchingRef = useRef(false); //Prevents re duplicate fetches
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [editShake, setEditShake] = useState(false);
+  const [rowToDelete, setRowToDelete] = useState<any>(null);
 
   // General UI messages and data
   const [successMsg, setSuccessMsg] = useState(''); // generic success message
@@ -40,6 +55,8 @@ export default function InventoryPage() {
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
   const [showValidationError, setShowValidationError] = useState(false);
   const [showErrorToast, setShowErrorToast] = useState(false);
+  const [selectedRow, setSelectedRow] = useState<any>(null); //stores the row being edited
+  const [searchTerm, setSearchTerm] = useState('');
   const [formErrors, setFormErrors] = useState<{
     productName?: string;
     category?: string;
@@ -61,9 +78,76 @@ export default function InventoryPage() {
     Number(form.price) > 0 &&
     !skuError;
 
+  const [editErrors, setEditErrors] = useState<{
+    price?: string;
+  }>({});
+
   const handleChange = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
+
+  const [stockAmount, setStockAmount] = useState('');
+  const [isAddingStock, setIsAddingStock] = useState(false);
+  const [stockError, setStockError] = useState<string | null>(null);
+
+  async function handleAddStock(e: React.FormEvent) {
+    e.preventDefault();
+
+    if (!selectedRow) return;
+
+    const desiredStock = Number(stockAmount);
+    const currentStock = selectedRow.stock;
+    const adjustment = desiredStock - currentStock;
+
+    if (isNaN(desiredStock)) {
+      setStockError('Enter a valid number');
+      return;
+    }
+
+    if (adjustment === 0) {
+      setStockError('No stock change detected');
+      return;
+    }
+
+    try {
+      setIsAddingStock(true);
+      setStockError(null);
+
+      const res = await fetch(`${baseURL}/inventory/adjust`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sku_id: selectedRow.skuId,
+          quantity: adjustment, // ✅ POSITIVE = ADD
+          reason: 'Manual restock from inventory screen',
+          // optional but safe
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        console.error('Add stock error:', err);
+        throw new Error(err.message || 'Failed to add stock');
+      }
+
+      // 🔁 Refresh from backend (source of truth)
+      await loadInventory();
+
+      // ✅ UX
+      setAddStockOpen(false);
+      setStockAmount('');
+      setSuccessMsg('Stock added successfully');
+      setTimeout(() => setSuccessMsg(''), 3000);
+      setEditOpen(true);
+    } catch (err: any) {
+      console.error(err);
+      setStockError(err.message || 'Failed to add stock');
+    } finally {
+      setIsAddingStock(false);
+    }
+  }
 
   async function handleCreateProduct(e: React.FormEvent) {
     e.preventDefault();
@@ -173,6 +257,124 @@ export default function InventoryPage() {
       setLoading(false);
     }
   }
+  //Prevents Update if nothing changed
+  function hasProductChanged(row: any, original: any) {
+    return (
+      Number(row.price) !== Number(original.price) ||
+      row.product !== original.product ||
+      row.category !== original.category
+    );
+  }
+
+  async function handleUpdateProduct(e: React.FormEvent) {
+    e.preventDefault();
+
+    if (!selectedRow || isUpdating) return;
+
+    // 🚫 1️⃣ Validate before anything
+    if (!selectedRow.price || Number(selectedRow.price) <= 0) {
+      setEditErrors({ price: 'Price must be greater than 0' });
+      setEditShake(true);
+      setTimeout(() => setEditShake(false), 400);
+      return;
+    }
+
+    // 🧠 2️⃣ SAVE PREVIOUS ROW (PUT THIS HERE)
+    const previousRow = rows.find((r) => r.skuId === selectedRow.skuId);
+
+    if (previousRow && !hasProductChanged(selectedRow, previousRow)) {
+      setEditShake(true);
+      setError('No changes detected');
+      setTimeout(() => setEditShake(false), 400);
+      setTimeout(() => setError(null), 2000);
+      return;
+    }
+
+    try {
+      setIsUpdating(true);
+      setEditErrors({});
+
+      // ⚡ 3️⃣ OPTIMISTIC UI UPDATE (PUT THIS HERE)
+      setRows((prev) =>
+        prev.map((r) =>
+          r.skuId === selectedRow.skuId
+            ? {
+                ...r,
+                price: Number(selectedRow.price),
+                product: selectedRow.product,
+                category: selectedRow.category,
+                optimistic: true,
+              }
+            : r
+        )
+      );
+
+      // 🔹 4️⃣ PATCH SKU PRICE
+      const res = await fetch(
+        `${baseURL}/catalog/skus/${selectedRow.skuId}/price`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            base_price: Number(selectedRow.price),
+          }),
+        }
+      );
+
+      if (!res.ok) throw new Error('Price update failed');
+
+      // 🔹 5️⃣ PATCH PRODUCT DETAILS
+      await updateProductDetails(selectedRow.productId, {
+        name: selectedRow.product,
+        description: selectedRow.category,
+      });
+
+      // ✅ 6️⃣ CLEAR OPTIMISTIC FLAG (PUT THIS HERE)
+      setRows((prev) =>
+        prev.map((r) =>
+          r.skuId === selectedRow.skuId ? { ...r, optimistic: false } : r
+        )
+      );
+
+      setEditOpen(false);
+      setSuccessMsg('Product updated successfully');
+      setTimeout(() => setSuccessMsg(''), 3000);
+    } catch (err) {
+      console.error(err);
+
+      // 🔄 7️⃣ ROLLBACK ON FAILURE (PUT THIS HERE)
+      if (previousRow) {
+        setRows((prev) =>
+          prev.map((r) => (r.skuId === previousRow.skuId ? previousRow : r))
+        );
+      }
+
+      setError('Failed to update product');
+      setTimeout(() => setError(null), 3000);
+    } finally {
+      setIsUpdating(false);
+    }
+  }
+
+  async function updateProductDetails(
+    productId: string,
+    payload: {
+      name?: string;
+      description?: string;
+    }
+  ) {
+    const res = await fetch(`${baseURL}/catalog/products/${productId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      throw new Error('Failed to update product details');
+    }
+  }
 
   async function loadInventory() {
     if (fetchingRef.current) return;
@@ -182,46 +384,92 @@ export default function InventoryPage() {
 
     try {
       console.log('loadInventory called');
+
       const [productsRes, stockRes] = await Promise.all([
         fetch(`${baseURL}/catalog/products`),
         fetch(`${baseURL}/inventory/stock-levels`),
       ]);
 
-      // Parse JSON responses
-      const products = await productsRes.json();
+      const all = await productsRes.json();
       const stockLevels = await stockRes.json();
 
-      // Build a lookup map from sku id to available quantity for quick access
+      // Only show active products
+      const products = all.filter((p: any) => p.active === true);
+
+      // Build lookup map from sku_id → quantity
       const stockMap: Record<string, number> = {};
       stockLevels.forEach((item: any) => {
         stockMap[item.sku_id] = Number(item.quantity_available);
       });
 
-      // Flatten products into table rows: one row per SKU with aggregated stock
+      // Build table rows
       const tableRows = products.flatMap((product: any) =>
         product.skus.map((sku: any) => ({
+          productId: product.id,
           skuId: sku.id,
           sku: sku.sku_code,
           product: product.name,
           category: product.description,
-          stock: stockMap[sku.id] ?? 0,
+          stock: stockMap[sku.id] ?? 0, // 0 if missing
           price: Number(sku.base_price),
         }))
       );
 
-      // Update state used by the table
       setRows(tableRows);
     } catch (err) {
       console.error('Inventory fetch error:', err);
     } finally {
-      // ✅ ALWAYS RESET
       fetchingRef.current = false;
       setLoadingTable(false);
     }
   }
+
+  async function handleDeleteProduct() {
+    if (!rowToDelete) return;
+
+    try {
+      setLoading(true);
+
+      const res = await fetch(
+        `${baseURL}/catalog/products/${rowToDelete.productId}`,
+        {
+          method: 'DELETE',
+        }
+      );
+
+      if (!res.ok) {
+        throw new Error('Failed to delete product');
+      }
+
+      // ✅ Refresh from backend so it disappears
+      await loadInventory();
+
+      // ✅ UX cleanup
+      setIsDeleting(false);
+      setRowToDelete(null);
+      setDeleteSuccess(true);
+      setTimeout(() => setDeleteSuccess(false), 3000);
+    } catch (err) {
+      console.error(err);
+      setError('Failed to delete product');
+      setTimeout(() => setError(null), 3000);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   useEffect(() => {
     loadInventory();
   }, []);
+
+  const filteredRows = rows.filter((row) => {
+    const term = searchTerm.toLowerCase();
+
+    return (
+      row.product.toLowerCase().includes(term) ||
+      row.sku.toLowerCase().includes(term)
+    );
+  });
   return (
     <div className='space-y-6'>
       {/* Header */}
@@ -268,8 +516,13 @@ export default function InventoryPage() {
 
         <input
           type='text'
-          placeholder='Search Product by name or Scan Barcode'
-          className={`w-full outline-none text-md text-gray-500 ${montserrat.className}`}
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder='Search Product by name or SKU'
+          className={`w-full outline-none text-md text-gray-700
+  transition-all duration-200
+  focus:ring-2 focus:ring-blue-400
+  focus:shadow-md ${montserrat.className}`}
         />
       </div>
       ``
@@ -398,9 +651,9 @@ export default function InventoryPage() {
                   viewBox='0 0 24 24'
                   fill='none'
                   stroke='currentColor'
-                  stroke-width='2'
-                  stroke-linecap='round'
-                  stroke-linejoin='round'
+                  strokeWidth='2'
+                  strokeLinecap='round'
+                  strokeLinejoin='round'
                   className='lucide lucide-x-icon lucide-x'
                 >
                   <path d='M18 6 6 18' />
@@ -411,13 +664,10 @@ export default function InventoryPage() {
 
             {/* CONFIRMATION TEXT */}
             <div className='flex flex-col items-center text-center mb-3 gap-3'>
-              <p className='text-black font-bold flex items-center'>
-                Confirm Delete item?
-              </p>
-              <p
-                className={`text-gray-500 font-bold flex items-center ${montserrat.className}`}
-              >
-                Deodarant SKU: CRB-234
+              <p className='text-black font-bold'>{rowToDelete?.product}</p>
+
+              <p className={`text-gray-500 text-sm ${montserrat.className}`}>
+                SKU: {rowToDelete?.sku}
               </p>
             </div>
 
@@ -432,14 +682,12 @@ export default function InventoryPage() {
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  setIsDeleting(false);
-                  setDeleteSuccess(true);
-                  setTimeout(() => setDeleteSuccess(false), 3000);
-                }}
-                className={`px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 ${montserrat.className}`}
+                onClick={handleDeleteProduct}
+                disabled={loading}
+                className={`px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700
+    ${loading ? 'opacity-70 cursor-not-allowed' : ''}`}
               >
-                Delete
+                {loading ? 'Deleting...' : 'Delete'}
               </button>
             </div>
           </div>
@@ -448,7 +696,11 @@ export default function InventoryPage() {
       {/* Edit Product Popup */}
       {editOpen && (
         <div className='fixed inset-0 bg-black/40 z-40 flex items-center justify-center'>
-          <div className='relative bg-white rounded-lg w-full max-w-2xl p-6 shadow-lg'>
+          <div
+            className={`relative bg-white rounded-lg w-full max-w-2xl p-6 shadow-lg ${
+              editShake ? 'animate-shake' : ''
+            }`}
+          >
             <h2
               className={`text-xl font-bold text-black mb-6 ${montserrat.className} `}
             >
@@ -456,60 +708,90 @@ export default function InventoryPage() {
             </h2>
 
             <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                setEditOpen(false);
-                setSuccessMsg('Product has been updated');
-                setTimeout(() => setSuccessMsg(''), 3000);
-              }}
+              onSubmit={handleUpdateProduct}
               className={`grid grid-cols-2 gap-4 ${montserrat.className}`}
             >
               {/* LEFT */}
-              <Input label='Product Name' placeholder='Foxie' />
-              <Input label='Category' placeholder='Snacks' />
+              <Input
+                label='Product Name'
+                value={selectedRow?.product || ''}
+                onChange={(e) =>
+                  setSelectedRow((prev: any) => ({
+                    ...prev,
+                    product: e.target.value,
+                  }))
+                }
+              />
+              <Input
+                label='Category'
+                value={selectedRow?.category || ''}
+                onChange={(e) =>
+                  setSelectedRow((prev: any) => ({
+                    ...prev,
+                    category: e.target.value,
+                  }))
+                }
+              />
 
-              <Input label='Sale Price' placeholder='1900' />
-              <Input label='Cost Price' placeholder='5000' />
+              <div>
+                <Input
+                  label='Price'
+                  value={selectedRow?.price || ''}
+                  onChange={(e) => {
+                    setSelectedRow((prev: any) => ({
+                      ...prev,
+                      price: e.target.value,
+                    }));
+                    setEditErrors({});
+                  }}
+                />
 
-              <Input label='Current Stock' placeholder='200' />
-              <Input label='Minimum Stock' placeholder='20' />
-
-              <Input label='SKU' placeholder='CRB-234' />
-              <Input label='Expiry Date' placeholder='11/09/27' />
+                {editErrors.price && (
+                  <p className='text-sm text-red-600 mt-1'>
+                    {editErrors.price}
+                  </p>
+                )}
+              </div>
+              <Input label='SKU' value={selectedRow?.sku || ''} disabled />
 
               {/* ACTIONS */}
               <div className='col-span-2 flex justify-between mt-6'>
                 <div className='flex gap-3'>
                   <button
                     type='button'
-                    onClick={() => setAddStockOpen(true)}
-                    className='bg-blue-600 text-white px-4 py-2 rounded'
+                    onClick={() => {
+                      setAddStockOpen(true);
+                      setEditOpen(false);
+                      setStockAmount(String(selectedRow.stock));
+                    }}
+                    disabled={isUpdating}
+                    className={`' border  text-white bg-blue-600 px-4 py-2 rounded-lg'
+    ${isUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     Add Stock
-                  </button>
-
-                  <button
-                    type='button'
-                    className='bg-red-600 text-white px-4 py-2 rounded'
-                  >
-                    Deactivate
                   </button>
                 </div>
 
                 <div className='flex gap-3'>
                   <button
-                    type='button'
+                    disabled={isUpdating}
                     onClick={() => setEditOpen(false)}
-                    className='border border-black text-black px-4 py-2 rounded'
+                    className={`border border-black text-black px-4 py-2 rounded
+    ${isUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     Cancel
                   </button>
 
                   <button
                     type='submit'
-                    className='bg-blue-600 text-white px-4 py-2 rounded'
+                    disabled={isUpdating}
+                    className={`bg-blue-600 text-white px-4 py-2 rounded flex items-center gap-2
+    ${isUpdating ? 'opacity-70 cursor-not-allowed' : ''}`}
                   >
-                    Update
+                    {isUpdating && (
+                      <span className='w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin' />
+                    )}
+                    {isUpdating ? 'Updating...' : 'Update'}
                   </button>
                 </div>
               </div>
@@ -520,33 +802,35 @@ export default function InventoryPage() {
       {/* The Add Product Popup */}
       {addStockOpen && (
         <div className='fixed inset-0 bg-black/50 z-50 flex items-center justify-center'>
-          <div className='bg-white w-[400px] rounded-lg p-6'>
+          <div className='bg-white w-100 rounded-lg p-6'>
             <h3 className='text-lg text-black font-semibold mb-4'>Add Stock</h3>
 
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                setAddStockOpen(false);
-                setSuccessMsg('Stock added successfully');
-                setTimeout(() => setSuccessMsg(''), 3000);
-              }}
-              className='space-y-4'
-            >
+            <form onSubmit={handleAddStock} className='space-y-4'>
               <div>
                 <label className='block text-sm text-black mb-1'>
                   Insert Stock
                 </label>
+
                 <input
                   type='number'
+                  value={stockAmount}
+                  onChange={(e) => setStockAmount(e.target.value)}
                   className='w-full border border-black text-black rounded px-3 py-2'
-                  placeholder='1000'
+                  placeholder='100'
                 />
+
+                {stockError && (
+                  <p className='text-sm text-red-600 mt-1'>{stockError}</p>
+                )}
               </div>
 
               <div className='flex justify-end gap-3 mt-4'>
                 <button
                   type='button'
-                  onClick={() => setAddStockOpen(false)}
+                  onClick={() => {
+                    setAddStockOpen(false); // close Add Stock
+                    setEditOpen(true); // reopen Edit popup
+                  }}
                   className='border border-black text-black px-4 py-2 rounded'
                 >
                   Cancel
@@ -554,9 +838,14 @@ export default function InventoryPage() {
 
                 <button
                   type='submit'
-                  className='bg-blue-600 text-white px-4 py-2 rounded'
+                  disabled={isAddingStock}
+                  className={`bg-blue-600 text-white px-4 py-2 rounded flex items-center gap-2
+    ${isAddingStock ? 'opacity-70 cursor-not-allowed' : ''}`}
                 >
-                  Add
+                  {isAddingStock && (
+                    <span className='w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin' />
+                  )}
+                  {isAddingStock ? 'Adding...' : 'Add'}
                 </button>
               </div>
             </form>
@@ -722,11 +1011,13 @@ export default function InventoryPage() {
                 <TableSkeletonRow />
               </>
             ) : (
-              rows.map((row, i) => (
+              filteredRows.map((row, i) => (
                 <tr
                   key={row.skuId ?? i}
                   className={`border-t last:border-b hover:bg-gray-50
-        transition-all duration-300 ${montserrat.className}
+        transition-all duration-300 animate-fade-in animate-fade-slide ${
+          montserrat.className
+        }
         ${row.optimistic ? 'animate-row-in' : ''}
       `}
                 >
@@ -763,12 +1054,17 @@ export default function InventoryPage() {
 
                   <td className='px-6 py-4 flex gap-4'>
                     <button
-                      className={`text-black ${
-                        row.optimistic
-                          ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                          : 'text-black hover:shadow-lg'
-                      }`}
-                      onClick={() => setIsDeleting(true)}
+                      className={`text-black  transition-all duration-200
+    hover:-translate-y-0.5 hover:shadow-md hover:shadow-blue-200
+    active:scale-95 ${
+      row.optimistic
+        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+        : 'text-black hover:shadow-lg'
+    }`}
+                      onClick={() => {
+                        setRowToDelete(row);
+                        setIsDeleting(true);
+                      }}
                     >
                       <svg
                         xmlns='http://www.w3.org/2000/svg'
@@ -790,12 +1086,17 @@ export default function InventoryPage() {
                       </svg>
                     </button>
                     <button
-                      className={`text-blue-600 ${
-                        row.optimistic
-                          ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                          : ' text-blue-500 hover:shadow-lg'
-                      }`}
-                      onClick={() => setEditOpen(true)}
+                      className={`text-blue-600 transition-all duration-200
+    hover:-translate-y-0.5 hover:shadow-md hover:shadow-blue-200
+    active:scale-95 ${
+      row.optimistic
+        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+        : ' text-blue-500 hover:shadow-lg'
+    }`}
+                      onClick={() => {
+                        setEditOpen(true);
+                        setSelectedRow(row);
+                      }}
                     >
                       <svg
                         xmlns='http://www.w3.org/2000/svg'

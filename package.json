@@ -1,5 +1,6 @@
 {
   "dependencies": {
-    "@nestjs/config": "^4.0.2"
+    "@nestjs/config": "^4.0.2",
+    "framer-motion": "^12.25.0"
   }
 }
