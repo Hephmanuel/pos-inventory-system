@@ -1,9 +1,14 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { StockItem } from './entities/stock-item.entity';
 import { StockMovement, MovementType } from './entities/stock-movement.entity';
-import { Sku } from '../catalog/entities/sku.entity'; 
+import { Sku } from '../catalog/entities/sku.entity';
+import { AdjustStockDto } from './dto/adjust-stock.dto';
 
 @Injectable()
 export class InventoryService {
@@ -15,11 +20,15 @@ export class InventoryService {
     private dataSource: DataSource,
   ) {}
 
-  // 1. DEDUCT STOCK
+  /**
+   * 1. DEDUCT STOCK
+   * Used during checkout transactions
+   */
   async deductStock(sku_id: string, quantity: number, manager: any) {
     const item = await manager.findOne(StockItem, { where: { sku_id } });
 
-    if (!item) throw new NotFoundException(`SKU ${sku_id} not found in inventory.`);
+    if (!item)
+      throw new NotFoundException(`SKU ${sku_id} not found in inventory.`);
 
     const available = Number(item.quantity_available);
     if (available < quantity) {
@@ -37,31 +46,32 @@ export class InventoryService {
     });
     await manager.save(movement);
 
-    // Cast to any to safely access price if needed
     const sku = await manager.findOne(Sku, { where: { id: sku_id } });
     return { price: Number(sku.base_price || 0) };
   }
 
-  // 2. GET STOCK LEVELS (Fixed for TS Errors)
+  /**
+   * 2. GET STOCK LEVELS
+   * Fetches current inventory for the frontend dashboard
+   */
   async getStockLevels() {
-    // Get ALL SKUs for ACTIVE products only.
     const skus = await this.dataSource.getRepository(Sku).find({
-      relations: ['product', 'stock_item'], 
+      relations: ['product', 'stock_item'],
       where: {
         product: {
           active: true,
-        }
+        },
       },
       order: {
         product: { name: 'ASC' },
       },
     });
 
-    // Map result to the format expected by the frontend
-    const stockData = skus.map(sku => {
-      const quantity = sku.stock_item ? Number(sku.stock_item.quantity_available) : 0;
-      // Default reorder point logic
-      const reorderPoint = 10; 
+    return skus.map((sku) => {
+      const quantity = sku.stock_item
+        ? Number(sku.stock_item.quantity_available)
+        : 0;
+      const reorderPoint = 10;
 
       return {
         sku_id: sku.id,
@@ -69,27 +79,48 @@ export class InventoryService {
         product_name: sku.product.name,
         quantity_available: quantity,
         reorder_point: reorderPoint,
-        status: quantity === 0 
-          ? 'OUT_OF_STOCK' 
-          : quantity <= reorderPoint 
-            ? 'LOW_STOCK' 
-            : 'IN_STOCK'
+        status:
+          quantity === 0
+            ? 'OUT_OF_STOCK'
+            : quantity <= reorderPoint
+              ? 'LOW_STOCK'
+              : 'IN_STOCK',
       };
     });
-
-    // We return the array directly so stockLevels.forEach works in the frontend
-    return stockData;
   }
 
-  // 3. UPDATE STOCK
-  async updateStock(sku_id: string, quantity: number) {
+  /**
+   * 3. ADJUST STOCK
+   * Handled by the InventoryController /api/v1/inventory/adjust
+   */
+  async adjustStock(dto: AdjustStockDto) {
+    const { sku_id, quantity, reason } = dto;
+
+    // Find the current stock record
     const item = await this.stockItemRepo.findOne({ where: { sku_id } });
 
     if (!item) {
-        throw new NotFoundException('Stock item not found. Please initialize stock first.');
+      throw new NotFoundException(
+        `Stock record for SKU ${sku_id} not found. Please initialize inventory for this product.`,
+      );
     }
 
-    item.quantity_available = Number(item.quantity_available) + quantity;
+    // 1. Update the quantity_available
+    // We cast to Number because decimal columns often return strings from Postgres
+    const currentQty = Number(item.quantity_available);
+    item.quantity_available = currentQty + quantity;
+
+    // 2. Create the movement audit record
+    // Using ADJUSTMENT as the type to match your MovementType enum
+    const movement = this.movementRepo.create({
+      sku_id,
+      quantity: quantity,
+      reason: reason || 'Manual Adjustment',
+      movement_type: MovementType.ADJUSTMENT,
+    });
+
+    // 3. Save both in the database
+    await this.movementRepo.save(movement);
     return await this.stockItemRepo.save(item);
   }
 }
