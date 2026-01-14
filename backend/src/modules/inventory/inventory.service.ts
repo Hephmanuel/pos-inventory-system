@@ -93,30 +93,36 @@ export class InventoryService {
    * 3. ADJUST STOCK
    * Handled by the InventoryController /api/v1/inventory/adjust
    */
-  async adjustStock(
-    sku_id: string,
-    amount: number,
-    reason: string = 'Manual Adjustment',
-  ) {
+  async adjustStock(data: any, amount?: number, reason?: string) {
+    // 1. Destructure the values based on how it's called
+    const sku_id = typeof data === 'string' ? data : data.sku_id;
+    const qty = typeof data === 'string' ? amount : data.quantity;
+    const res =
+      typeof data === 'string' ? reason : data.reason || 'Manual Adjustment';
+
+    // 2. Now use the extracted 'sku_id' for the query
     let stock = await this.stockItemRepo.findOne({ where: { sku_id } });
 
     if (!stock) {
       stock = this.stockItemRepo.create({
-        sku_id,
+        sku_id: sku_id,
         store_id: 'MAIN_STORE',
         quantity_available: 0,
       });
       await this.stockItemRepo.save(stock);
     }
 
-    stock.quantity_available = Number(stock.quantity_available || 0) + amount;
+    // 3. Update using the extracted 'qty'
+    const currentQuantity = Number(stock.quantity_available || 0);
+    stock.quantity_available = currentQuantity + Number(qty);
+
     const savedItem = await this.stockItemRepo.save(stock);
 
-    // Now use the passed 'reason' in the movement log
+    // 4. Log movement with the extracted 'res'
     const movement = this.movementRepo.create({
       sku_id,
-      quantity: amount,
-      reason: reason, // <--- This captures the audit trail
+      quantity: Number(qty),
+      reason: res,
       movement_type: MovementType.ADJUSTMENT,
     });
     await this.movementRepo.save(movement);
