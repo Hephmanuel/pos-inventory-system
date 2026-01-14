@@ -116,11 +116,12 @@ export class SalesService {
       // 🔄 Loop through lines to restore stock
       for (const line of sale.lines) {
         // Updated to use adjustStock with the required DTO format
-        await this.inventoryService.adjustStock({
-          sku_id: line.sku_id,
-          quantity: Number(line.quantity), // Adding back the stock
-          reason: `Refund processed for Receipt: ${sale.receipt_id}`,
-        });
+        // Pass the arguments individually to match the new InventoryService signature
+        await this.inventoryService.adjustStock(
+          line.sku_id,
+          Number(line.quantity),
+          `Refund processed for Receipt: ${sale.receipt_id}`, // <--- Passing the reason!
+        );
       }
 
       sale.status = 'REFUNDED';

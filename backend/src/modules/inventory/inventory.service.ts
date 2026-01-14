@@ -93,34 +93,34 @@ export class InventoryService {
    * 3. ADJUST STOCK
    * Handled by the InventoryController /api/v1/inventory/adjust
    */
-  async adjustStock(dto: AdjustStockDto) {
-    const { sku_id, quantity, reason } = dto;
+  async adjustStock(
+    sku_id: string,
+    amount: number,
+    reason: string = 'Manual Adjustment',
+  ) {
+    let stock = await this.stockItemRepo.findOne({ where: { sku_id } });
 
-    // Find the current stock record
-    const item = await this.stockItemRepo.findOne({ where: { sku_id } });
-
-    if (!item) {
-      throw new NotFoundException(
-        `Stock record for SKU ${sku_id} not found. Please initialize inventory for this product.`,
-      );
+    if (!stock) {
+      stock = this.stockItemRepo.create({
+        sku_id,
+        store_id: 'MAIN_STORE',
+        quantity_available: 0,
+      });
+      await this.stockItemRepo.save(stock);
     }
 
-    // 1. Update the quantity_available
-    // We cast to Number because decimal columns often return strings from Postgres
-    const currentQty = Number(item.quantity_available);
-    item.quantity_available = currentQty + quantity;
+    stock.quantity_available = Number(stock.quantity_available || 0) + amount;
+    const savedItem = await this.stockItemRepo.save(stock);
 
-    // 2. Create the movement audit record
-    // Using ADJUSTMENT as the type to match your MovementType enum
+    // Now use the passed 'reason' in the movement log
     const movement = this.movementRepo.create({
       sku_id,
-      quantity: quantity,
-      reason: reason || 'Manual Adjustment',
+      quantity: amount,
+      reason: reason, // <--- This captures the audit trail
       movement_type: MovementType.ADJUSTMENT,
     });
-
-    // 3. Save both in the database
     await this.movementRepo.save(movement);
-    return await this.stockItemRepo.save(item);
+
+    return savedItem;
   }
 }
