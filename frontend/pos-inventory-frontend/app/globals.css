@@ -15,6 +15,35 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
+@media print {
+  /* Hide every part of the dashboard and the modal UI */
+  body * {
+    visibility: hidden;
+  }
+
+  /* Show only the receipt container and its content */
+  #receipt-print,
+  #receipt-print * {
+    visibility: visible;
+  }
+
+  /* Position the receipt at the very top-left of the paper */
+  #receipt-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    display: block !important;
+  }
+}
+
+/* analytics print mode */
+/* 1. Hide the print-only container from the normal screen view */
+
+/* hide print content on screen */
+
+/* analytics print mode */
+
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -133,23 +162,57 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+#print-store {
+  display: none;
+}
+
+/* hide print content on screen */
+#print-store {
+  display: none;
+}
+
+/* analytics print mode */
 @media print {
-  /* Hide every part of the dashboard and the modal UI */
-  body * {
-    visibility: hidden;
+  body.print-analytics * {
+    visibility: hidden !important;
   }
-  
-  /* Show only the receipt container and its content */
-  #receipt-print, #receipt-print * {
-    visibility: visible;
+
+  body.print-analytics #print-store,
+  body.print-analytics #print-store * {
+    visibility: visible !important;
   }
-  
-  /* Position the receipt at the very top-left of the paper */
-  #receipt-print {
-    position: absolute;
-    left: 0;
-    top: 0;
+
+  body.print-analytics #print-store {
+    display: block;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 13px;
+    padding: 20mm;
+    background: white;
+    color: black;
+  }
+
+  table {
     width: 100%;
-    display: block !important;
+    border-collapse: collapse;
+    margin-top: 12px;
+  }
+
+  th,
+  td {
+    border: 1px solid #000;
+    padding: 6px;
+    text-align: center;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  tr {
+    page-break-inside: avoid;
+  }
+
+  @page {
+    margin: 20mm;
   }
 }

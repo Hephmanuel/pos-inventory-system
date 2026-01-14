@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { baseURL } from '@/app/constant';
 
-type Staff = {
+export type Staff = {
   id: string;
   first_name: string;
   last_name: string;
@@ -19,12 +19,11 @@ export function useStaffProfile() {
   useEffect(() => {
     let cancelled = false;
 
-    async function load() {
+    async function loadProfile() {
       try {
-        const email = localStorage.getItem('staffEmail');
+        const savedUser = localStorage.getItem('user');
 
-        // No early return that breaks React
-        if (!email) {
+        if (!savedUser) {
           if (!cancelled) {
             setUser(null);
             setLoading(false);
@@ -32,31 +31,32 @@ export function useStaffProfile() {
           return;
         }
 
-        const res = await fetch(`${baseURL}/staff`);
-        const staff = await res.json();
+        const { id } = JSON.parse(savedUser);
 
-        const me = staff.find(
-          (s: Staff) => s.email === email && s.active === true
-        );
+        const res = await fetch(`${baseURL}/staff/${id}`);
+
+        if (!res.ok) {
+          throw new Error('Staff not found');
+        }
+
+        const me: Staff = await res.json();
 
         if (!cancelled) {
-          setUser(me || null);
-          setLoading(false);
+          setUser(me.active ? me : null);
         }
-      } catch {
-        if (!cancelled) {
-          setUser(null);
-          setLoading(false);
-        }
+      } catch (err) {
+        console.error('Profile load failed', err);
+        if (!cancelled) setUser(null);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     }
 
-    load();
-
+    loadProfile();
     return () => {
       cancelled = true;
     };
   }, []);
 
-  return user;
+  return { user, loading };
 }

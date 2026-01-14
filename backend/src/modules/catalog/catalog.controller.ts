@@ -1,22 +1,31 @@
 // @ts-nocheck
-import { Controller, Post, Get, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { CatalogService } from './catalog.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
 @ApiTags('catalog')
-
-
 @Controller('catalog')
 export class CatalogController {
   constructor(private readonly catalogService: CatalogService) {}
 
   @Post('products')
   @ApiOperation({ summary: 'Create a new product with SKUs' })
-  @ApiResponse({ status: 201, description: 'Product and SKUs created successfully' })
+  @ApiResponse({
+    status: 201,
+    description: 'Product and SKUs created successfully',
+  })
   @ApiResponse({ status: 400, description: 'Bad Request' })
   create(@Body() createProductDto: CreateProductDto) {
-    return this.catalogService.create(createProductDto);
+    return this.catalogService.createProductWithSkus(createProductDto); //Match the service name
   }
 
   @Get('products')
@@ -52,7 +61,10 @@ export class CatalogController {
 
   @Patch('products/:id')
   @ApiOperation({ summary: 'Update product details' })
-  updateProduct(@Param('id') id: string, @Body() body: Partial<CreateProductDto>) {
+  updateProduct(
+    @Param('id') id: string,
+    @Body() body: Partial<CreateProductDto>,
+  ) {
     return this.catalogService.updateProduct(id, body);
   }
 
