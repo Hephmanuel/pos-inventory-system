@@ -46,7 +46,7 @@ export default function AnalyticsPage() {
     async function loadReceipts() {
       try {
         setIsLoading(true);
-        const data = await getSalesHistory(); // ✅ SAME AS CASHIER
+        const data = await getSalesHistory();
         setReceipts(data);
       } catch (err) {
         console.error('Failed to fetch receipts', err);
@@ -80,8 +80,8 @@ export default function AnalyticsPage() {
   };
 
   const receiptsToRender = isExporting
-    ? receipts // ✅ FULL receipts for PDF
-    : paginatedReceipts; // ✅ normal UI
+    ? receipts 
+    : paginatedReceipts; 
   return (
     <div ref={analyticsRef} className='  space-y-3  '>
       <div>

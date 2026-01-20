@@ -113,7 +113,7 @@ export class SalesService {
         );
       }
 
-      // 🔄 Loop through lines to restore stock
+      //Loop through lines to restore stock
       for (const line of sale.lines) {
         // Updated to use adjustStock with the required DTO format
         // Pass the arguments individually to match the new InventoryService signature
